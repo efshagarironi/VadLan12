@@ -952,6 +952,8 @@ jobs:
               String openFolder = null, pickTarget = null;
               String lastClosedFolder = null;
               int folderDir = 1;
+              float swipeX0, swipeY0;
+              boolean swipeFired;
 
               List<AppItem> allApps = new ArrayList<>();
               List<String> added = new ArrayList<>();
@@ -1023,6 +1025,27 @@ jobs:
               // (a closed folder can be touched: the new folder then replaces the open one)
               @Override
               public boolean dispatchTouchEvent(MotionEvent ev) {
+                  // swipe up on the icon pages (paged mode): opens the folder that was closed last, on any page
+                  if (page == HOME && pagedMode() && openFolder == null && !dragActive) {
+                      int act = ev.getActionMasked();
+                      if (act == MotionEvent.ACTION_DOWN) {
+                          swipeX0 = ev.getRawX();
+                          swipeY0 = ev.getRawY();
+                          swipeFired = false;
+                      } else if (act == MotionEvent.ACTION_MOVE && !swipeFired) {
+                          float dx = ev.getRawX() - swipeX0, dy = ev.getRawY() - swipeY0;
+                          boolean aboveDock = true;
+                          if (dockBoxV != null && dockBoxV.getHeight() > 0) {
+                              int[] dl = new int[2];
+                              dockBoxV.getLocationOnScreen(dl);
+                              aboveDock = swipeY0 < dl[1];
+                          }
+                          if (aboveDock && dy < -dp(40) && Math.abs(dy) > Math.abs(dx) * 1.3f) {
+                              swipeFired = true;
+                              openLastClosed();
+                          }
+                      }
+                  }
                   if (page == HOME && openFolder != null && ev.getActionMasked() == MotionEvent.ACTION_DOWN) {
                       if (closing) return true;
                       if (immersive && hit(dockBoxV, ev)) return super.dispatchTouchEvent(ev);
@@ -1419,7 +1442,7 @@ jobs:
                   SwipePanel(Context c) { super(c); }
 
                   boolean sideOk(float dx) {
-                      if ((sp.getBoolean("fpAnim", true) && !sp.getBoolean("fpTrans", false)) || !fromDock || openFolder == null) return false;
+                      if ((sp.getBoolean("fpAnim", true) && sp.getInt("fdAnim", -1) < 0) || !fromDock || openFolder == null) return false;
                       return dockNeighbor(openFolder, dx > 0) != null;
                   }
 
@@ -1946,7 +1969,7 @@ jobs:
                   box.setOrientation(LinearLayout.VERTICAL);
                   final int dszF = sp.getInt("home_btn_sz", 40);
                   // counters settings
-                  box.addView(accordionGroup(0xFF26A69A, "🔢", t("داده‌ها", "Data"), fg,
+                  box.addView(accordionGroup(0xFF26A69A, "🔢", t("کادر داده‌ها", "Data boxes"), fg,
                           countersContent(fg)));
                   // placement of the two icons: first lever = horizontal, second = vertical
                   box.addView(accordionGroupFaded(0xFF00ACC1, "↔", t("جای‌گیری آیکون‌ها", "Icons placement"), fg, 0.6f, () -> new View[]{
@@ -2841,8 +2864,8 @@ jobs:
 
               View dateBox(int fg) { return timeBox(fg, 1.0f, 0.85f, true); }
 
-              static final String[] ANIM_FA = {"کشویی", "چرخشی", "محو شدن", "زوم", "چرخش سه‌بعدی", "ریزش", "بالا آمدن", "کرکره‌ای", "چرخش نرم", "گردش کامل", "کشویی با محو"};
-              static final String[] ANIM_EN = {"Slide", "Rotate", "Fade", "Zoom", "3D flip", "Drop", "Rise", "Shutter", "Soft tilt", "Full spin", "Slide and fade"};
+              static final String[] ANIM_FA = {"کشویی", "محو شدن", "زوم", "ریزش", "کرکره‌ای", "لایه‌ای (Stack)", "ورق‌زدن (Flip)", "ورق کتاب (Page)", "عمق (Depth)", "شیشه‌ای (Glass)", "زوم عمقی (Zoom)", "چرخش سه‌بعدی (3D)", "مکعب سه‌بعدی (3D Cube)"};
+              static final String[] ANIM_EN = {"Slide", "Fade", "Zoom", "Drop", "Shutter", "Stack", "Flip", "Page", "Depth", "Glass", "Zoom depth", "3D flip", "3D cube"};
 
               String dateSep() { return sp.getBoolean("momayyez", false) ? "\u066B" : DATE_SEP; }
 
@@ -2868,6 +2891,8 @@ jobs:
                   sec.addView(timeOpt(sec, fg, 0xFFFF7043, "٫", t("ممیز", "Decimal mark"),
                           t("جداکننده‌های تاریخ به ممیز (٫) تبدیل شوند",
                                   "Date separators become the decimal mark (٫)"), "momayyez"));
+                  sec.addView(accordionRow(0xFF8BC34A, "↕", t("فاصله تاریخ و ساعت", "Clock and date gap"),
+                          "stackGap", -7, 10, 0, " mm", fg, null));
               }
 
               View timeOpt(final LinearLayout sec, final int fg, int dot, String sym, String title, String sub, final String key) {
@@ -2919,7 +2944,9 @@ jobs:
                   dt.setTextColor(sp.getInt("box_tc", fg));
                   dt.setAlpha(0.65f);
                   dt.setTypeface(weightFace(sp.getInt("box_tw", 3)));
-                  b.addView(dt, new LinearLayout.LayoutParams(-1, 0, 0.8f));
+                  LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(-1, 0, 0.8f);
+                  dlp.topMargin = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_MM, sp.getInt("stackGap", 0), getResources().getDisplayMetrics());
+                  b.addView(dt, dlp);
 
                   setClock(ck);
                   startTick(ck, false);
@@ -2932,22 +2959,30 @@ jobs:
               // position of one page or panel: rel 0 = visible, +1 = one step to the right, -1 = one step to the left
               void applyPageTransform(View v, float rel, int anim, int W, int H) {
                   float a = Math.abs(rel);
-                  float tx = -rel * W, ty = 0, al = 1f, scx = 1f, scy = 1f, rot = 0, rotY = 0;
+                  int pw = v.getWidth() > 0 ? v.getWidth() : W;
+                  int ph = v.getHeight() > 0 ? v.getHeight() : H;
+                  v.setCameraDistance(12000f * getResources().getDisplayMetrics().density);
+                  float tx = -rel * W, ty = 0, al = 1f, scx = 1f, scy = 1f, rot = 0, rotY = 0, tz = 0;
+                  v.setPivotX(pw / 2f);
+                  v.setPivotY(ph / 2f);
                   switch (anim) {
-                      case 1: rot = rel * 25f; break;
-                      case 2: tx = 0; al = Math.max(0f, 1f - a); break;
-                      case 3: tx = 0; scx = Math.max(0.4f, 1f - a * 0.5f); scy = scx; al = Math.max(0f, 1f - a); break;
-                      case 4: rotY = rel * 70f; break;
-                      case 5: ty = a * H * 0.25f; al = Math.max(0f, 1f - a); break;
-                      case 6: tx = 0; ty = rel * H; break;
-                      case 7: scx = Math.max(0.2f, 1f - a * 0.6f); break;
-                      case 8: rot = rel * 12f; break;
-                      case 9: rot = rel * 360f; scx = Math.max(0.5f, 1f - a * 0.5f); scy = scx; al = Math.max(0f, 1f - a); break;
-                      case 10: tx = -rel * W * 0.6f; al = Math.max(0f, 1f - a * 0.7f); break;
-                      default: break;
+                      case 1: tx = 0; al = Math.max(0f, 1f - a); break;                       // fade
+                      case 2: tx = 0; scx = Math.max(0.4f, 1f - a * 0.5f); scy = scx; al = Math.max(0f, 1f - a); break; // zoom
+                      case 3: ty = a * H * 0.25f; al = Math.max(0f, 1f - a); break;           // drop
+                      case 4: scx = Math.max(0.2f, 1f - a * 0.6f); break;                     // shutter
+                      case 5: scx = scy = Math.max(0.8f, 1f - a * 0.1f); tz = -a * 20f; break; // stack
+                      case 6: tx = 0; rotY = -rel * 90f; break;                               // flip
+                      case 7: tx = 0; v.setPivotX(rel > 0 ? 0 : pw); rotY = -rel * 60f; break; // page
+                      case 8: scx = scy = Math.max(0.75f, 1f - a * 0.25f); tz = -a * 40f; tx = -rel * W * 0.7f; al = Math.max(0f, 1f - a * 0.4f); break; // depth
+                      case 9: tx = -rel * W * 0.5f; scx = scy = Math.max(0.9f, 1f - a * 0.1f); al = Math.max(0f, 1f - a); break; // glass
+                      case 10: tx = 0; scx = scy = 1f + a * 0.3f; al = Math.max(0f, 1f - a); break; // zoom depth
+                      case 11: rotY = rel * 70f; break;                                       // 3d flip
+                      case 12: tx = 0; v.setPivotX(rel > 0 ? 0 : pw); rotY = rel * 90f; break; // 3d cube
+                      default: break;                                                         // slide
                   }
                   v.setTranslationX(tx);
                   v.setTranslationY(ty);
+                  v.setTranslationZ(tz);
                   v.setRotation(rot);
                   v.setRotationY(rotY);
                   v.setScaleX(scx);
@@ -2956,16 +2991,26 @@ jobs:
               }
 
               // list of transition animations under "Paged mode off" on the home settings page
-              View transAnimGroup(final int fg) {
-                  int cur = sp.getInt("pgAnim", 0);
+              // rows of the effect list; withDefault adds a first row that keeps the old behaviour (folders only)
+              View[] animRows(final int fg, final String key, boolean withDefault) {
+                  int cur = sp.getInt(key, withDefault ? -1 : 0);
                   List<View> items = new ArrayList<>();
+                  if (withDefault) {
+                      items.add(row(0xFF78909C, "•", t("پیش‌فرض", "Default"), null, cur == -1 ? 3 : 2, fg,
+                              v -> { sp.edit().putInt(key, -1).apply(); show(); }));
+                  }
                   for (int i = 0; i < ANIM_FA.length; i++) {
                       final int idx = i;
                       items.add(row(0xFF26A69A, "▶", t(ANIM_FA[i], ANIM_EN[i]), null, cur == i ? 3 : 2, fg,
-                              v -> { sp.edit().putInt("pgAnim", idx).apply(); show(); }));
+                              v -> { sp.edit().putInt(key, idx).apply(); show(); }));
                   }
-                  return accordionGroup(0xFF26A69A, "🎞", t("انیمیشن انتقال", "Transition animation"), fg,
-                          items.toArray(new View[0]));
+                  return items.toArray(new View[0]);
+              }
+
+              // home settings: effects (boxes are a little fainter)
+              View transAnimGroup(final int fg) {
+                  return accordionGroupFaded(0xFF26A69A, "🎞", t("افکت ها", "Effects"), fg, 0.6f,
+                          () -> animRows(fg, "pgAnim", false));
               }
 
               boolean onScreen(View v) {
@@ -4798,11 +4843,8 @@ jobs:
                                   show();
                               })));
                   }
-                  final boolean transOn = sp.getBoolean("fpTrans", false);
-                  sb.addView(toggleRow(0xFFEC407A, "🎞", t("انیمیشن انتقال", "Transition animation"),
-                          t("جابه‌جایی بین پوشه‌های باز با انیمیشن انتقال صفحه خانگی",
-                                  "Switching between open folders uses the home transition animation"),
-                          "fpTrans", false, fg));
+                  sb.addView(accordionGroupFaded(0xFFEC407A, "🎞", t("افکت ها", "Effects"), fg, 0.6f,
+                          () -> animRows(fg, "fdAnim", true)));
                   final boolean closeOnLaunch = sp.getBoolean("fpCloseOnLaunch", false);
                   sb.addView(row(0xFFE53935, "🔒", t("بستن پوشه", "Close Folder"),
                           t("بستن پوشه بعد از انتخاب برنامه", "Close folder after launching app"),
@@ -5003,7 +5045,7 @@ jobs:
                   // replacing one open folder by another (popup or immersive): the old one stays as a picture and fades out
                   final boolean switching = anim && sPanel != null && (!full || (sTabs != null && ov != null));
                   // animation option off: replacing one folder by another is a smooth crossfade
-                  final boolean xfade = switching && (!sp.getBoolean("fpAnim", true) || sp.getBoolean("fpTrans", false));
+                  final boolean xfade = switching && (!sp.getBoolean("fpAnim", true) || sp.getInt("fdAnim", -1) >= 0);
                   // the neck between the open folder and the closed one in the dock only shows when the closed one stays visible
                   final boolean bridgeOn = full && fromDock && !sp.getBoolean("fpHideSmall", true);
                   final float prevCxF = prevCx;
@@ -5314,8 +5356,8 @@ jobs:
                                   bridgeV.set(true, bcx, bot, top0, half, Math.max(half, wf), bc1, bc2);
                               }
                           }
-                          if (xfade && sp.getBoolean("fpTrans", false)) {
-                              int trA = sp.getInt("pgAnim", 0);
+                          if (xfade && sp.getInt("fdAnim", -1) >= 0) {
+                              int trA = sp.getInt("fdAnim", -1);
                               applyPageTransform(panel, folderDir * (1f - p), trA, dm.widthPixels, dm.heightPixels);
                               if (gPanel != null) applyPageTransform(gPanel, -folderDir * p, trA, dm.widthPixels, dm.heightPixels);
                           }
