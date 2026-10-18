@@ -1969,7 +1969,7 @@ jobs:
                   box.setOrientation(LinearLayout.VERTICAL);
                   final int dszF = sp.getInt("home_btn_sz", 40);
                   // counters settings
-                  box.addView(accordionGroup(0xFF26A69A, "🔢", t("کادر داده‌ها", "Data boxes"), fg,
+                  box.addView(accordionGroup(0xFF26A69A, "🔢", t("داده‌ها نوار ابزار", "Toolbar data"), fg,
                           countersContent(fg)));
                   // placement of the two icons: first lever = horizontal, second = vertical
                   box.addView(accordionGroupFaded(0xFF00ACC1, "↔", t("جای‌گیری آیکون‌ها", "Icons placement"), fg, 0.6f, () -> new View[]{
@@ -2864,8 +2864,9 @@ jobs:
 
               View dateBox(int fg) { return timeBox(fg, 1.0f, 0.85f, true); }
 
-              static final String[] ANIM_FA = {"کشویی", "محو شدن", "زوم", "ریزش", "کرکره‌ای", "لایه‌ای (Stack)", "ورق‌زدن (Flip)", "ورق کتاب (Page)", "عمق (Depth)", "شیشه‌ای (Glass)", "زوم عمقی (Zoom)", "چرخش سه‌بعدی (3D)", "مکعب سه‌بعدی (3D Cube)"};
-              static final String[] ANIM_EN = {"Slide", "Fade", "Zoom", "Drop", "Shutter", "Stack", "Flip", "Page", "Depth", "Glass", "Zoom depth", "3D flip", "3D cube"};
+              static final String[] ANIM_FA = {"کشویی", "محو شدن", "زوم", "ریزش", "کرکره‌ای", "لایه‌ای (Stack)", "ورق‌زدن (Flip)", "شیشه‌ای (Glass)", "زوم عمقی (Zoom)", "چرخش سه‌بعدی (3D)", "مکعب سه‌بعدی (3D Cube)"};
+              static final String[] ANIM_EN = {"Slide", "Fade", "Zoom", "Drop", "Shutter", "Stack", "Flip", "Glass", "Zoom depth", "3D flip", "3D cube"};
+              static final int[] ANIM_IDS = {0, 1, 2, 3, 4, 5, 6, 9, 10, 11, 12};
 
               String dateSep() { return sp.getBoolean("momayyez", false) ? "\u066B" : DATE_SEP; }
 
@@ -2892,7 +2893,7 @@ jobs:
                           t("جداکننده‌های تاریخ به ممیز (٫) تبدیل شوند",
                                   "Date separators become the decimal mark (٫)"), "momayyez"));
                   sec.addView(accordionRow(0xFF8BC34A, "↕", t("فاصله تاریخ و ساعت", "Clock and date gap"),
-                          "stackGap", -7, 10, 0, " mm", fg, null));
+                          "stackGapUm", -3000, 3000, 0, " µm", fg, null));
               }
 
               View timeOpt(final LinearLayout sec, final int fg, int dot, String sym, String title, String sub, final String key) {
@@ -2945,7 +2946,7 @@ jobs:
                   dt.setAlpha(0.65f);
                   dt.setTypeface(weightFace(sp.getInt("box_tw", 3)));
                   LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(-1, 0, 0.8f);
-                  dlp.topMargin = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_MM, sp.getInt("stackGap", 0), getResources().getDisplayMetrics());
+                  dlp.topMargin = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_MM, sp.getInt("stackGapUm", 0) / 1000f, getResources().getDisplayMetrics());
                   b.addView(dt, dlp);
 
                   setClock(ck);
@@ -3000,8 +3001,8 @@ jobs:
                               v -> { sp.edit().putInt(key, -1).apply(); show(); }));
                   }
                   for (int i = 0; i < ANIM_FA.length; i++) {
-                      final int idx = i;
-                      items.add(row(0xFF26A69A, "▶", t(ANIM_FA[i], ANIM_EN[i]), null, cur == i ? 3 : 2, fg,
+                      final int idx = ANIM_IDS[i];
+                      items.add(row(0xFF26A69A, "▶", t(ANIM_FA[i], ANIM_EN[i]), null, cur == ANIM_IDS[i] ? 3 : 2, fg,
                               v -> { sp.edit().putInt(key, idx).apply(); show(); }));
                   }
                   return items.toArray(new View[0]);
@@ -3059,7 +3060,7 @@ jobs:
                           slider(t("جابجایی عرضی", "Vertical move"), "box_py", -30, 30, 0, " dp", fg, null)));
                   box.addView(timeSection(fg));
                   box.addView(accordionRow(0xFF2196F3, "📐", t("عرض کادرها", "Boxes width"), "box_w", 20, 140, 62, " dp", fg, null));
-                  box.addView(accordionRow(0xFF2196F3, "📐", t("ارتفاع کادرها", "Boxes height"), "box_h", 28, 80, 40, " dp", fg, null));
+                  box.addView(accordionRow(0xFF2196F3, "📐", t("ارتفاع کادرها", "Boxes height"), "box_h", 10, 50, 40, " dp", fg, null));
                   box.addView(accordionRow(0xFF4CAF50, "🔤", t("اندازه اعداد", "Numbers size"), "box_ts", 10, 40, 18, " sp", fg, null));
                   box.addView(accordionRow(0xFFFF9800, "⚖", t("کلفتی اعداد (۰ تا ۳)", "Numbers weight (0 to 3)"), "box_tw", 0, 3, 3, "", fg, null));
                   box.addView(row(0xFFE91E63, "🎨", t("رنگ و شفافیت کادرها", "Boxes color and transparency"), null, 0, fg,
@@ -5356,7 +5357,7 @@ jobs:
                                   bridgeV.set(true, bcx, bot, top0, half, Math.max(half, wf), bc1, bc2);
                               }
                           }
-                          if (xfade && sp.getInt("fdAnim", -1) >= 0) {
+                          if (xfade && opening[0] && sp.getInt("fdAnim", -1) >= 0) {
                               int trA = sp.getInt("fdAnim", -1);
                               applyPageTransform(panel, folderDir * (1f - p), trA, dm.widthPixels, dm.heightPixels);
                               if (gPanel != null) applyPageTransform(gPanel, -folderDir * p, trA, dm.widthPixels, dm.heightPixels);
