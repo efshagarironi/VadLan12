@@ -988,6 +988,7 @@ jobs:
                   loadDock();
                   fixDocked();
                   notifyBar();
+                  lastClosedFolder = sp.getString("lastClosed", null);
                   checkMockIntent(getIntent());
                   // keep the shortcut tile state equal to the saved choice
                   try {
@@ -4295,7 +4296,10 @@ jobs:
 
               void closeFolder() {
                   if (closing) return;
-                  if (openFolder != null) lastClosedFolder = openFolder;
+                  if (openFolder != null) {
+                      lastClosedFolder = openFolder;
+                      sp.edit().putString("lastClosed", openFolder).apply();
+                  }
                   if (curPanel != null && folderApply != null) {
                       final Consumer<Float> ap = folderApply;
                       final View pnl = curPanel;
@@ -4767,7 +4771,6 @@ jobs:
                   r.setOnClickListener(c);
                   return r;
               }
-
               void addFolderDialog(final List<String> initial) {
                   final EditText et = new EditText(this);
                   et.setHint(t("نام پوشه", "Folder name"));
