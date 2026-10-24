@@ -1720,27 +1720,38 @@ jobs:
 
            // shows the things of a folder (or of the bubble moves) as a list; a folder inside opens the same way
            private void showKids(final List<BubbleActs.Act> kids, final Runnable reopenParent) {
-            pushKids(kids, reopenParent, null);
+            pushKidsPlain(kids, reopenParent, null);
            }
 
-           // a folder opens: with "folder box" on, a new column beside the open one; tapping the same folder again closes its column
-           private void pushKids(final List<BubbleActs.Act> kids, final Runnable reopenParent, final String key) {
-            List<LItem> l = kidItems(kids, reopenParent);
-            if (sp.getBoolean("bub_fbox", false) && listRoot != null) {
-             if (key != null && key.equals(curKey)) { closeTopSideAnim(); return; }
-             openSideBox(l, key);
-             return;
-            }
+           // the list replaces the one on screen (folder box off, or the bubble moves)
+           private void pushKidsPlain(final List<BubbleActs.Act> kids, final Runnable reopenParent, final String key) {
             closeList();
             slideOpen = true;
-            openCustomList(l);
+            openCustomList(kidItems(kids, reopenParent, 0));
             slideOpen = false;
             curKey = key;
            }
 
-           private List<LItem> kidItems(final List<BubbleActs.Act> kids, final Runnable reopenParent) {
+           // a folder tap in column "owner" (0 = the first list). With folder box on, the folder opens in the column right next to its own;
+           // while that column is open, other folders of the same column do nothing; the same folder closes its column
+           private void folderTap(final BubbleActs.Act k, final int owner, final Runnable reopenThisLevel) {
+            final String fk = fkey(k);
+            if (!sp.getBoolean("bub_fbox", false) || listRoot == null) {
+             pushKidsPlain(BubbleActs.kids(k), reopenThisLevel, fk);
+             return;
+            }
+            final int top = sideBoxes.size();
+            final int next = owner + 1;
+            if (next <= top) {
+             String nk = next < top ? sideBoxes.get(next).key : curKey;
+             if (fk.equals(nk)) { while (sideBoxes.size() >= next) closeTopSideAnim(); }
+             return;
+            }
+            openSideBox(kidItems(BubbleActs.kids(k), null, next), fk);
+           }
+
+           private List<LItem> kidItems(final List<BubbleActs.Act> kids, final Runnable reopenParent, final int owner) {
             List<LItem> l = new java.util.ArrayList<>();
-            // with "folder box" on, the columns have no back box: a column closes by tapping its folder again
             if (reopenParent != null && !sp.getBoolean("bub_fbox", false)) {
              LItem back = new LItem();
              back.dot = "⬅";
@@ -1754,7 +1765,7 @@ jobs:
              if (BubbleActs.isFolder(k)) {
               it.icon = folderIcon();
               it.text = BubbleActs.title(this, k);
-              it.click = () -> pushKids(BubbleActs.kids(k), () -> pushKids(kids, reopenParent, null), fkey(k));
+              it.click = () -> folderTap(k, owner, () -> pushKidsPlain(kids, reopenParent, null));
              } else {
               it.pkg = k.pkg;
               it.text = BubbleActs.title(this, k);
@@ -1935,9 +1946,10 @@ jobs:
 
            private void openList(final boolean withLauncher) {
              if (sp.getBoolean("bub_auto", false) && TileClickService.ready()) {
-              TileClickService.sampleLuma(this, lum -> { autoLight = lum > 128; customItems = null; openListCore(withLauncher); });
+              TileClickService.sampleLuma(this, lum -> { if (lum < 0) Toast.makeText(this, tr("رنگ زیر کادرها خوانده نشد", "Could not read the colour under the boxes"), Toast.LENGTH_SHORT).show(); autoLight = lum > 128; customItems = null; openListCore(withLauncher); });
               return;
              }
+             if (sp.getBoolean("bub_auto", false)) Toast.makeText(this, tr("برای اتومات، سرویس دسترسی‌پذیری VadLan را روشن کنید", "For auto colours, turn on the VadLan accessibility service"), Toast.LENGTH_LONG).show();
              customItems = null;
              openListCore(withLauncher);
             }
@@ -2241,7 +2253,7 @@ jobs:
              if (a == null) continue;
              if (BubbleActs.isFolder(a)) {
               addListItem(null, 0, null, folderIcon(), BubbleActs.title(this, a),
-               () -> pushKids(BubbleActs.kids(a), () -> openList(listWithLauncher), fkey(a)));
+               () -> folderTap(a, 0, () -> openList(listWithLauncher)));
               continue;
             }
             final int slot = i;
@@ -8015,7 +8027,7 @@ jobs:
              l.add(accordionRow(0xFF42A5F5, "↔", t("عرض کادر", "Box width"), "bub_lw", 15, 200, 190, " dp", fg, null));
              l.add(accordionRow(0xFF26C6DA, "↕", t("ارتفاع کادر", "Box height"), "bub_lh", 20, 100, 100, "%", fg, null));
              if (sep) l.add(accordionRow(0xFF8D6E63, "⇕", t("فاصله کادرها", "Box spacing"), "bub_gap", -2000, 6000, 800, " µm", fg, null));
-             l.add(row(0xFFE91E63, "🎨", t("رنگ کادر", "Box color"),
+             l.add(row(0xFFE91E63, "🎨", t("رنگ", "Color"),
                t("رنگ و شفافیت پس‌زمینه کادرهای عملکرد", "Color and opacity of the action boxes background"), 0, fg,
                v -> { page = BLBG; show(); }));
              l.add(row(0xFF7E57C2, "🪟", t("شیشه‌ای", "Glass"),
@@ -8993,9 +9005,9 @@ jobs:
               : (mode == 4 ? t("رنگ کادر اصلی", "Main box color") : mode == 5 ? t("رنگ کادر فرعی", "Secondary box color") : t("پس زمینه کادر عملکرد", "Action box background")))));
             LinearLayout p = vbox();
             p.addView(topBar(title, fg));
-            if (mode == 6) p.addView(toggleRow(0xFFEC407A, "◐", t("اتومات", "Auto"),
+            if (mode == 6) p.addView(toggleRowThen(0xFFEC407A, "◐", t("اتومات", "Auto"),
               t("رنگ کادرها و فونت آیکون‌ها برعکس رنگ پس‌زمینه می‌شود (روشن ↔ تیره)", "Boxes and text take the opposite colour of the background (light ↔ dark)"),
-              "bub_auto", false, fg));
+              "bub_auto", false, fg, () -> { if (sp.getBoolean("bub_auto", false) && !TileClickService.ready()) BubbleActs.needA11y(this); show(); }));
             if (mode == 6) p.addView(toggleRowThen(0xFF8D6E63, "🔤", t("رنگ فونت", "Font color"),
               t("رنگ دلخواه برای نام عملکردها و پوشه‌ها", "Your own colour for the names of actions and folders"),
               "bub_fcol_on", false, fg, () -> show()));
