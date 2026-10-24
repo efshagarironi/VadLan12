@@ -380,6 +380,33 @@ jobs:
             }
            }
 
+           static void sampleLuma(final android.content.Context c, final java.util.function.IntConsumer cb) {
+            if (inst == null || Build.VERSION.SDK_INT < 30) { cb.accept(-1); return; }
+            try {
+             inst.takeScreenshot(android.view.Display.DEFAULT_DISPLAY, c.getMainExecutor(),
+               new AccessibilityService.TakeScreenshotCallback() {
+              @Override
+              public void onSuccess(AccessibilityService.ScreenshotResult r) {
+               long sum = 0; int n = 0;
+               try {
+                Bitmap hw = Bitmap.wrapHardwareBuffer(r.getHardwareBuffer(), r.getColorSpace());
+                Bitmap bmp = hw.copy(Bitmap.Config.ARGB_8888, false);
+                r.getHardwareBuffer().close();
+                for (int y = 0; y < bmp.getHeight(); y += 40)
+                 for (int x = 0; x < bmp.getWidth(); x += 40) {
+                  int p = bmp.getPixel(x, y);
+                  sum += (int) (0.299 * android.graphics.Color.red(p) + 0.587 * android.graphics.Color.green(p) + 0.114 * android.graphics.Color.blue(p));
+                  n++;
+                 }
+               } catch (Throwable e) { n = 0; }
+               cb.accept(n > 0 ? (int) (sum / n) : -1);
+              }
+              @Override
+              public void onFailure(int code) { cb.accept(-1); }
+             });
+            } catch (Throwable e) { cb.accept(-1); }
+           }
+
            static boolean click(String name) {
             if (inst == null || name == null || name.trim().isEmpty()) return false;
             inst.start(name.trim());
@@ -1784,11 +1811,24 @@ jobs:
             private int lastTouchRawY = 0;
 
             // auto: the boxes take the opposite colour of the background behind them
-            private boolean autoBackLight() {
-             int c = sp.getInt("bg", 0xFF19191C);
-             return (0.299 * android.graphics.Color.red(c) + 0.587 * android.graphics.Color.green(c)
-               + 0.114 * android.graphics.Color.blue(c)) > 150;
+            private boolean autoLight = false;
+
+            // true when a touch is inside one of the open boxes
+            private boolean touchOnAnyBox(MotionEvent ev) {
+             int x = (int) ev.getRawX(), y = (int) ev.getRawY();
+             List<FrameLayout> roots = new ArrayList<>();
+             for (Box b : sideBoxes) roots.add(b.root);
+             roots.add(listRoot);
+             for (FrameLayout r : roots) {
+              if (r == null || r.getWidth() == 0) continue;
+              int[] l = new int[2];
+              r.getLocationOnScreen(l);
+              if (x >= l[0] && x <= l[0] + r.getWidth() && y >= l[1] && y <= l[1] + r.getHeight()) return true;
+             }
+             return false;
             }
+
+            private boolean autoBackLight() { return autoLight; }
 
             private int boxColorNow() {
              if (!sp.getBoolean("bub_auto", false)) return sp.getInt("bub_lcol", 0xF2202024);
@@ -1809,7 +1849,7 @@ jobs:
            int sh = getResources().getDisplayMetrics().heightPixels;
            forcedX = right ? listParams.x - w - gap : listParams.x + w + gap;
            // the new column starts at the height of the touched folder
-           int y = lastTouchRawY - dpToPx(28);
+           int y = lastTouchRawY;
            forcedY = Math.max(dpToPx(8), Math.min(sh - listParams.height - dpToPx(8), y));
            sideBoxes.add(new Box(listRoot, listCard, listParams, curKey));
            listRoot = null;
@@ -1893,10 +1933,14 @@ jobs:
 
            private List<LItem> customItems = null;
 
-           private void openList(boolean withLauncher) {
-            customItems = null;
-            openListCore(withLauncher);
-           }
+           private void openList(final boolean withLauncher) {
+             if (sp.getBoolean("bub_auto", false) && TileClickService.ready()) {
+              TileClickService.sampleLuma(this, lum -> { autoLight = lum > 128; customItems = null; openListCore(withLauncher); });
+              return;
+             }
+             customItems = null;
+             openListCore(withLauncher);
+            }
 
            private void openCustomList(List<LItem> items) {
             customItems = items;
@@ -1905,7 +1949,8 @@ jobs:
 
            private void openListCore(boolean withLauncher) {
             listWithLauncher = withLauncher;
-            listTextColor = (!sp.getBoolean("bub_auto", false) || autoBackLight()) ? 0xFFFFFFFF : 0xFF111111;
+            listTextColor = sp.getBoolean("bub_fcol_on", false) ? sp.getInt("bub_fcol", 0xFFFFFFFF)
+               : ((!sp.getBoolean("bub_auto", false) || autoBackLight()) ? 0xFFFFFFFF : 0xFF111111);
             handler.removeCallbacks(collapseRunnable);
             applyPosition();
             bubbleView.setAlpha(sp.getInt("mock_alpha", 90) / 100f);
@@ -1915,6 +1960,7 @@ jobs:
              @Override
              public boolean dispatchTouchEvent(MotionEvent ev) {
               if (ev.getAction() == MotionEvent.ACTION_OUTSIDE) {
+              if (touchOnAnyBox(ev)) return true;
                lastOutside = SystemClock.uptimeMillis();
                closeList();
                return true;
@@ -2159,7 +2205,7 @@ jobs:
             }
             row.setOnTouchListener((v, ev) -> {
              int a = ev.getAction();
-             if (a == MotionEvent.ACTION_DOWN) lastTouchRawY = (int) ev.getRawY();
+             if (a == MotionEvent.ACTION_DOWN) { int[] rl = new int[2]; v.getLocationOnScreen(rl); lastTouchRawY = rl[1]; }
              if (sep) {
               if (a == MotionEvent.ACTION_DOWN) v.setAlpha(0.65f);
               else if (a == MotionEvent.ACTION_UP || a == MotionEvent.ACTION_CANCEL) v.setAlpha(1f);
@@ -7969,7 +8015,7 @@ jobs:
              l.add(accordionRow(0xFF42A5F5, "↔", t("عرض کادر", "Box width"), "bub_lw", 15, 200, 190, " dp", fg, null));
              l.add(accordionRow(0xFF26C6DA, "↕", t("ارتفاع کادر", "Box height"), "bub_lh", 20, 100, 100, "%", fg, null));
              if (sep) l.add(accordionRow(0xFF8D6E63, "⇕", t("فاصله کادرها", "Box spacing"), "bub_gap", -2000, 6000, 800, " µm", fg, null));
-             l.add(row(0xFFE91E63, "🎨", t("پس زمینه", "Background"),
+             l.add(row(0xFFE91E63, "🎨", t("رنگ کادر", "Box color"),
                t("رنگ و شفافیت پس‌زمینه کادرهای عملکرد", "Color and opacity of the action boxes background"), 0, fg,
                v -> { page = BLBG; show(); }));
              l.add(row(0xFF7E57C2, "🪟", t("شیشه‌ای", "Glass"),
@@ -8950,6 +8996,11 @@ jobs:
             if (mode == 6) p.addView(toggleRow(0xFFEC407A, "◐", t("اتومات", "Auto"),
               t("رنگ کادرها و فونت آیکون‌ها برعکس رنگ پس‌زمینه می‌شود (روشن ↔ تیره)", "Boxes and text take the opposite colour of the background (light ↔ dark)"),
               "bub_auto", false, fg));
+            if (mode == 6) p.addView(toggleRowThen(0xFF8D6E63, "🔤", t("رنگ فونت", "Font color"),
+              t("رنگ دلخواه برای نام عملکردها و پوشه‌ها", "Your own colour for the names of actions and folders"),
+              "bub_fcol_on", false, fg, () -> show()));
+            if (mode == 6 && sp.getBoolean("bub_fcol_on", false)) p.addView(row(0xFF8D6E63, "🎨", t("انتخاب رنگ فونت", "Pick font colour"), null, 0, fg,
+              w -> prefColorDialog("bub_fcol", 0xFFFFFFFF, t("رنگ فونت", "Font colour"))));
 
             boolean hasImg = mode >= 4 ? false : mode == 0 ? bgBmp != null : (mode == 1 ? mbgBmp != null
               : (mode == 2 ? hfSrc != null : tbSrc != null));
