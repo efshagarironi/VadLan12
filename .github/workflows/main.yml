@@ -20,50 +20,9 @@ jobs:
           G=https://github.com/google/fonts/raw/main/ofl
           R=https://github.com/rastikerdar
           dl fa/Vazirmatn-VF.ttf "$G/vazirmatn/Vazirmatn%5Bwght%5D.ttf"
-          dl fa/Nastaliq_Noto-VF.ttf "$G/notonastaliqurdu/NotoNastaliqUrdu%5Bwght%5D.ttf"
-          dl fa/Naskh_Noto-VF.ttf "$G/notonaskharabic/NotoNaskhArabic%5Bwght%5D.ttf"
-          dl fa/Amiri.ttf "$G/amiri/Amiri-Regular.ttf"
-          dl fa/Lateef.ttf "$G/lateef/Lateef-Regular.ttf"
-          dl fa/Scheherazade_New.ttf "$G/scheherazadenew/ScheherazadeNew-Regular.ttf"
-          dl fa/Lalezar.ttf "$G/lalezar/Lalezar-Regular.ttf"
-          dl fa/Tajawal.ttf "$G/tajawal/Tajawal-Regular.ttf"
-          dl fa/Almarai.ttf "$G/almarai/Almarai-Regular.ttf"
-          dl fa/Mirza.ttf "$G/mirza/Mirza-Regular.ttf"
-          dl fa/Harmattan.ttf "$G/harmattan/Harmattan-Regular.ttf"
-          dl fa/Aref_Ruqaa.ttf "$G/arefruqaa/ArefRuqaa-Regular.ttf"
-          dl fa/Katibeh.ttf "$G/katibeh/Katibeh-Regular.ttf"
-          dl fa/Markazi_Text-VF.ttf "$G/markazitext/MarkaziText%5Bwght%5D.ttf"
-          dl fa/El_Messiri-VF.ttf "$G/elmessiri/ElMessiri%5Bwght%5D.ttf"
-          dl fa/Reem_Kufi-VF.ttf "$G/reemkufi/ReemKufi%5Bwght%5D.ttf"
-          dl fa/Changa-VF.ttf "$G/changa/Changa%5Bwght%5D.ttf"
-          dl fa/Jomhuria.ttf "$G/jomhuria/Jomhuria-Regular.ttf"
-          dl fa/Rakkas.ttf "$G/rakkas/Rakkas-Regular.ttf"
-          dl fa/Lemonada-VF.ttf "$G/lemonada/Lemonada%5Bwght%5D.ttf"
-          dl fa/Baloo_Bhaijaan_2-VF.ttf "$G/baloobhaijaan2/BalooBhaijaan2%5Bwght%5D.ttf"
-          dl fa/Mada-VF.ttf "$G/mada/Mada%5Bwght%5D.ttf"
           dl fa/Sahel.ttf "$R/sahel-font/raw/master/dist/Sahel.ttf"
           dl fa/Shabnam.ttf "$R/shabnam-font/raw/master/dist/Shabnam.ttf"
-          dl fa/Samim.ttf "$R/samim-font/raw/master/dist/Samim.ttf"
-          dl fa/Tanha.ttf "$R/tanha-font/raw/master/dist/Tanha.ttf"
-          dl fa/Parastoo.ttf "$R/parastoo-font/raw/master/dist/Parastoo.ttf"
-          dl fa/Gandom.ttf "$R/gandom-font/raw/master/dist/Gandom.ttf"
-          dl fa/Nahid.ttf "$R/nahid-font/raw/master/dist/Nahid.ttf"
           dl fa/Vazir.ttf "$R/vazir-font/raw/master/dist/Vazir.ttf"
-          dl en/Roboto-VF.ttf "$G/roboto/Roboto%5Bwdth%2Cwght%5D.ttf"
-          dl en/Open_Sans-VF.ttf "$G/opensans/OpenSans%5Bwdth%2Cwght%5D.ttf"
-          dl en/Montserrat-VF.ttf "$G/montserrat/Montserrat%5Bwght%5D.ttf"
-          dl en/Oswald-VF.ttf "$G/oswald/Oswald%5Bwght%5D.ttf"
-          dl en/Playfair_Display-VF.ttf "$G/playfairdisplay/PlayfairDisplay%5Bwght%5D.ttf"
-          dl en/Dancing_Script-VF.ttf "$G/dancingscript/DancingScript%5Bwght%5D.ttf"
-          dl en/Caveat-VF.ttf "$G/caveat/Caveat%5Bwght%5D.ttf"
-          dl en/Orbitron-VF.ttf "$G/orbitron/Orbitron%5Bwght%5D.ttf"
-          dl en/Lobster.ttf "$G/lobster/Lobster-Regular.ttf"
-          dl en/Pacifico.ttf "$G/pacifico/Pacifico-Regular.ttf"
-          dl en/Bebas_Neue.ttf "$G/bebasneue/BebasNeue-Regular.ttf"
-          dl en/Poppins.ttf "$G/poppins/Poppins-Regular.ttf"
-          dl en/Lato.ttf "$G/lato/Lato-Regular.ttf"
-          dl en/Righteous.ttf "$G/righteous/Righteous-Regular.ttf"
-          dl en/Press_Start_2P.ttf "$G/pressstart2p/PressStart2P-Regular.ttf"
 
           cat > settings.gradle <<'EOF'
           pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
@@ -303,6 +262,17 @@ jobs:
                   android:pathData="M6,18 a4,4 0 0 1 4,-4 h28 a4,4 0 0 1 4,4 v20 a4,4 0 0 1 -4,4 h-28 a4,4 0 0 1 -4,-4 z"/>
           </vector>
           EOF
+          cat > app/src/main/res/drawable/ic_home_app.xml <<'EOF'
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+              android:width="48dp" android:height="48dp"
+              android:viewportWidth="48" android:viewportHeight="48">
+              <path android:fillColor="#FF202024"
+                  android:pathData="M8,8 h32 a4,4 0 0 1 4,4 v32 a4,4 0 0 1 -4,4 h-32 a4,4 0 0 1 -4,-4 v-32 a4,4 0 0 1 4,-4 z"/>
+              <path android:fillColor="#FFFFFFFF"
+                  android:pathData="M24,12 L38,23 L35,23 L35,36 L27,36 L27,29 L21,29 L21,36 L13,36 L13,23 L10,23 Z"/>
+          </vector>
+          EOF
+
           cat > app/src/main/res/values/strings.xml <<'EOF'
           <resources>
               <string name="a11y_desc">Lets the VadLan bubble tap a Quick Settings tile (for example a VPN tile) for you.</string>
@@ -1513,7 +1483,7 @@ jobs:
           import android.widget.ScrollView;
           import android.widget.TextView;
           import android.widget.Toast;
-          import java.util.ArrayList; 
+          import java.util.ArrayList;
           import java.util.List;
 
           public class MockBubbleService extends Service {
@@ -1723,33 +1693,33 @@ jobs:
 
            // shows the things of a folder (or of the bubble moves) as a list; a folder inside opens the same way
            private void showKids(final List<BubbleActs.Act> kids, final Runnable reopenParent) {
-            pushKids(kids, reopenParent);
+            pushKids(kids, reopenParent, null);
            }
 
-           // shows the things of a folder: with "folder box" on, next to the box that is open; otherwise in place
-           private void pushKids(final List<BubbleActs.Act> kids, final Runnable reopenParent) {
+           // a folder opens: with "folder box" on, a new column beside the open one; tapping the same folder again closes its column
+           private void pushKids(final List<BubbleActs.Act> kids, final Runnable reopenParent, final String key) {
             List<LItem> l = kidItems(kids, reopenParent);
             if (sp.getBoolean("bub_fbox", false) && listRoot != null) {
-             openSideBox(l);
+             if (key != null && key.equals(curKey)) { closeTopSideAnim(); return; }
+             openSideBox(l, key);
              return;
             }
             closeList();
             slideOpen = true;
             openCustomList(l);
             slideOpen = false;
+            curKey = key;
            }
 
            private List<LItem> kidItems(final List<BubbleActs.Act> kids, final Runnable reopenParent) {
             List<LItem> l = new java.util.ArrayList<>();
-            if (reopenParent != null) {
+            // with "folder box" on, the columns have no back box: a column closes by tapping its folder again
+            if (reopenParent != null && !sp.getBoolean("bub_fbox", false)) {
              LItem back = new LItem();
              back.dot = "⬅";
              back.dotColor = 0xFFFFFFFF;
              back.text = tr("بازگشت", "Back");
-             back.click = () -> {
-              if (sp.getBoolean("bub_fbox", false) && !sideBoxes.isEmpty()) closeTopSide();
-              else { closeList(); reopenParent.run(); }
-             };
+             back.click = () -> { closeList(); reopenParent.run(); };
              l.add(back);
             }
             for (final BubbleActs.Act k : kids) {
@@ -1757,7 +1727,7 @@ jobs:
              if (BubbleActs.isFolder(k)) {
               it.icon = folderIcon();
               it.text = BubbleActs.title(this, k);
-              it.click = () -> pushKids(BubbleActs.kids(k), () -> pushKids(kids, reopenParent));
+              it.click = () -> pushKids(BubbleActs.kids(k), () -> pushKids(kids, reopenParent, null), fkey(k));
              } else {
               it.pkg = k.pkg;
               it.text = BubbleActs.title(this, k);
@@ -1804,30 +1774,101 @@ jobs:
 
             // boxes kept open next to each other ("folder box" option); the newest one is listRoot
             static class Box {
-             FrameLayout root; LinearLayout card; WindowManager.LayoutParams p;
-             Box(FrameLayout r, LinearLayout c, WindowManager.LayoutParams q) { root = r; card = c; p = q; }
+             FrameLayout root; LinearLayout card; WindowManager.LayoutParams p; String key;
+             Box(FrameLayout r, LinearLayout c, WindowManager.LayoutParams q, String k) { root = r; card = c; p = q; key = k; }
             }
-            private final List<Box> sideBoxes = new ArrayList<>();
+            private final List<Box> sideBoxes = new java.util.ArrayList<>();
             private Integer forcedX = null, forcedY = null;
+            private String curKey = null;
+            private int listTextColor = 0xFFFFFFFF;
+            private int lastTouchRawY = 0;
+
+            // auto: the boxes take the opposite colour of the background behind them
+            private boolean autoBackLight() {
+             int c = sp.getInt("bg", 0xFF19191C);
+             return (0.299 * android.graphics.Color.red(c) + 0.587 * android.graphics.Color.green(c)
+               + 0.114 * android.graphics.Color.blue(c)) > 150;
+            }
+
+            private int boxColorNow() {
+             if (!sp.getBoolean("bub_auto", false)) return sp.getInt("bub_lcol", 0xF2202024);
+             return autoBackLight() ? 0xF2202024 : 0xF2F4F4F4;
+            }
+
+            private Drawable homeIcon() { return getDrawable(R.drawable.ic_home_app); }
+
+            private static String fkey(BubbleActs.Act k) {
+             return (k.name == null ? "" : k.name) + "|" + (k.id == null ? 0 : k.id.hashCode());
+            }
 
             // puts a new box next to the current one, at the same height
-            private void openSideBox(List<LItem> l) {
-             int gap = dpToPx(8);
-             boolean right = sp.getInt("mock_px", 70) > 50;
-             int w = listParams.width;
-             forcedX = right ? listParams.x - w - gap : listParams.x + w + gap;
-             forcedY = listParams.y;
-             sideBoxes.add(new Box(listRoot, listCard, listParams));
-             listRoot = null;
-             listCard = null;
-             slideOpen = true;
-             openCustomList(l);
-             slideOpen = false;
-             forcedX = null;
-             forcedY = null;
-            }
+            private void openSideBox(List<LItem> l, String key) {
+           int gap = dpToPx(8);
+           boolean right = sp.getInt("mock_px", 70) > 50;
+           int w = listParams.width;
+           int sh = getResources().getDisplayMetrics().heightPixels;
+           forcedX = right ? listParams.x - w - gap : listParams.x + w + gap;
+           // the new column starts at the height of the touched folder
+           int y = lastTouchRawY - dpToPx(28);
+           forcedY = Math.max(dpToPx(8), Math.min(sh - listParams.height - dpToPx(8), y));
+           sideBoxes.add(new Box(listRoot, listCard, listParams, curKey));
+           listRoot = null;
+           listCard = null;
+           slideOpen = true;
+           openCustomList(l);
+           slideOpen = false;
+           curKey = key;
+           forcedX = null;
+           forcedY = null;
+           // slides in from the bubble side
+           final WindowManager.LayoutParams p = listParams;
+           final FrameLayout root = listRoot;
+           final int to = p.x;
+           final int from = to + (right ? dpToPx(80) : -dpToPx(80));
+           p.x = from;
+           try { wm.updateViewLayout(root, p); } catch (Exception e) { }
+           ValueAnimator va = ValueAnimator.ofFloat(0f, 1f);
+           va.setDuration(230);
+           va.setInterpolator(new DecelerateInterpolator());
+           va.addUpdateListener(an -> {
+            p.x = from + Math.round((to - from) * (Float) an.getAnimatedValue());
+            try { wm.updateViewLayout(root, p); } catch (Exception e) { }
+           });
+           va.start();
+          }
 
-            // closes the newest box; the box under it is shown again
+          // closes the newest column with a slide back to the bubble side; the column under it is shown again
+          private void closeTopSideAnim() {
+           if (sideBoxes.isEmpty() || listRoot == null) { closeList(); return; }
+           final FrameLayout old = listRoot;
+           final WindowManager.LayoutParams op = listParams;
+           Box b = sideBoxes.remove(sideBoxes.size() - 1);
+           listRoot = b.root;
+           listCard = b.card;
+           listParams = b.p;
+           curKey = b.key;
+           final int dir = sp.getInt("mock_px", 70) > 50 ? 1 : -1;
+           final int from = op.x;
+           final int to = from + dir * dpToPx(80);
+           ValueAnimator va = ValueAnimator.ofFloat(0f, 1f);
+           va.setDuration(220);
+           va.setInterpolator(new DecelerateInterpolator());
+           va.addUpdateListener(an -> {
+            float t = (Float) an.getAnimatedValue();
+            op.x = from + Math.round((to - from) * t);
+            old.setAlpha(1f - t);
+            try { wm.updateViewLayout(old, op); } catch (Exception e) { }
+           });
+           va.addListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator an) {
+             try { wm.removeView(old); } catch (Exception e) { }
+            }
+           });
+           va.start();
+          }
+
+          // closes the newest box; the box under it is shown again
             private void closeTopSide() {
              if (sideBoxes.isEmpty()) { closeList(); return; }
              if (listRoot != null) { try { wm.removeView(listRoot); } catch (Exception e) { } }
@@ -1835,6 +1876,7 @@ jobs:
              listRoot = b.root;
              listCard = b.card;
              listParams = b.p;
+             curKey = b.key;
             }
 
             private Drawable folderIcon() { return getDrawable(R.drawable.ic_folder_app); }
@@ -1863,6 +1905,7 @@ jobs:
 
            private void openListCore(boolean withLauncher) {
             listWithLauncher = withLauncher;
+            listTextColor = (!sp.getBoolean("bub_auto", false) || autoBackLight()) ? 0xFFFFFFFF : 0xFF111111;
             handler.removeCallbacks(collapseRunnable);
             applyPosition();
             bubbleView.setAlpha(sp.getInt("mock_alpha", 90) / 100f);
@@ -1883,7 +1926,7 @@ jobs:
             final boolean sep = sp.getBoolean("bub_sep", false);
             final boolean glass = sp.getBoolean("bub_lglass", false);
             if (sep) listRoot.setBackgroundColor(0);   // separate boxes: every row has its own background
-            else listRoot.setBackground(boxDrawable(sp.getInt("bub_lcol", 0xF2202024), glass, dpToPx(16)));
+            else listRoot.setBackground(boxDrawable(boxColorNow(), glass, dpToPx(16)));
             ScrollView sv = new ScrollView(this);
             sv.setVerticalScrollBarEnabled(false);
             listCard = new LinearLayout(this);
@@ -1978,6 +2021,7 @@ jobs:
            private void closeList() {
              for (Box b : sideBoxes) { try { wm.removeView(b.root); } catch (Exception e) { } }
              sideBoxes.clear();
+             curKey = null;
             final FrameLayout old = listRoot;
             listRoot = null;
             listCard = null;
@@ -2036,7 +2080,7 @@ jobs:
             listParams.x = right ? sw - w - dpToPx(8) : dpToPx(8);
             listParams.y = Math.max(edge, y);
             if (forcedX != null) listParams.x = Math.max(dpToPx(4), Math.min(sw - w - dpToPx(4), forcedX));
-            if (forcedY != null) listParams.y = forcedY;
+            if (forcedY != null) listParams.y = Math.max(dpToPx(8), Math.min(sh - listParams.height - dpToPx(8), forcedY));
             try {
              if (add) wm.addView(listRoot, listParams);
              else wm.updateViewLayout(listRoot, listParams);
@@ -2090,7 +2134,7 @@ jobs:
              // one box per action: the height lever sizes all boxes together
              int lh = Math.max(20, Math.min(100, sp.getInt("bub_lh", 100)));
              boxH = Math.max(dpToPx(8) + dpToPx(52) * lh / 100, content);
-             row.setBackground(boxDrawable(sp.getInt("bub_lcol", 0xF2202024), sp.getBoolean("bub_lglass", false), dpToPx(14)));
+             row.setBackground(boxDrawable(boxColorNow(), sp.getBoolean("bub_lglass", false), dpToPx(14)));
             }
             if (dot != null) {
              TextView d = listText(dot, 12, dotColor);
@@ -2107,7 +2151,7 @@ jobs:
              row.addView(iv, il);
             }
             if (showNm) {
-             TextView nameTv = listText(text, ts, 0xFFFFFFFF);
+             TextView nameTv = listText(text, ts, listTextColor);
              if (showIco) nameTv.setTextAlignment(View.TEXT_ALIGNMENT_VIEW_START);
              row.addView(nameTv, new LinearLayout.LayoutParams(0, -2, 1));
             } else {
@@ -2115,6 +2159,7 @@ jobs:
             }
             row.setOnTouchListener((v, ev) -> {
              int a = ev.getAction();
+             if (a == MotionEvent.ACTION_DOWN) lastTouchRawY = (int) ev.getRawY();
              if (sep) {
               if (a == MotionEvent.ACTION_DOWN) v.setAlpha(0.65f);
               else if (a == MotionEvent.ACTION_UP || a == MotionEvent.ACTION_CANCEL) v.setAlpha(1f);
@@ -2140,7 +2185,7 @@ jobs:
             }
             final BubbleActs.Act[] all = BubbleActs.load(sp);
             if (listWithLauncher) {
-             addListItem("🏠", 0xFFFFFFFF, null, null, tr("لانچر", "Launcher"), () -> {
+             addListItem(null, 0, null, homeIcon(), "VadLan", () -> {
               closeList();
               openLauncher(false);
              });
@@ -2150,7 +2195,7 @@ jobs:
              if (a == null) continue;
              if (BubbleActs.isFolder(a)) {
               addListItem(null, 0, null, folderIcon(), BubbleActs.title(this, a),
-               () -> pushKids(BubbleActs.kids(a), () -> openList(listWithLauncher)));
+               () -> pushKids(BubbleActs.kids(a), () -> openList(listWithLauncher), fkey(a)));
               continue;
             }
             final int slot = i;
@@ -7875,7 +7920,7 @@ jobs:
              sp.edit().putBoolean("bub_launcher", !bubLau).apply();
              show();
             }));
-            r.addView(row(0xFFEF6C00, "⚡", t("روشن عملکرد", "Actions on"),
+            r.addView(row(0xFFEF6C00, "⚡", t("روشن", "On"),
               t("با زدن روی حباب، لیست عملکردها باز شود؛ با زدن روی نام برنامه فقط آخرین عملکرد آن اجرا می‌شود",
                 "Tapping the bubble opens the action list; tapping an app name runs only its last action"),
               bubAct ? 3 : 2, fg, v -> {
@@ -8902,6 +8947,9 @@ jobs:
               : (mode == 4 ? t("رنگ کادر اصلی", "Main box color") : mode == 5 ? t("رنگ کادر فرعی", "Secondary box color") : t("پس زمینه کادر عملکرد", "Action box background")))));
             LinearLayout p = vbox();
             p.addView(topBar(title, fg));
+            if (mode == 6) p.addView(toggleRow(0xFFEC407A, "◐", t("اتومات", "Auto"),
+              t("رنگ کادرها و فونت آیکون‌ها برعکس رنگ پس‌زمینه می‌شود (روشن ↔ تیره)", "Boxes and text take the opposite colour of the background (light ↔ dark)"),
+              "bub_auto", false, fg));
 
             boolean hasImg = mode >= 4 ? false : mode == 0 ? bgBmp != null : (mode == 1 ? mbgBmp != null
               : (mode == 2 ? hfSrc != null : tbSrc != null));
