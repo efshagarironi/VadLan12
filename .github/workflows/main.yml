@@ -1670,6 +1670,42 @@ jobs:
 
            private ValueAnimator backAnim;
 
+           // app icons are loaded once (and ahead of time, while the bubble is being dragged) so the list opens without a hitch
+           private final java.util.Map<String, Drawable> svcIcons = new java.util.concurrent.ConcurrentHashMap<>();
+
+           private Drawable svcIcon(String pkg) {
+            if (pkg == null) return null;
+            Drawable d = svcIcons.get(pkg);
+            if (d == null) {
+             try { d = getPackageManager().getApplicationIcon(pkg); } catch (Throwable e) { return null; }
+             if (d == null) return null;
+             svcIcons.put(pkg, d);
+            }
+            try {
+             Drawable.ConstantState cs = d.getConstantState();
+             return cs != null ? cs.newDrawable(getResources()).mutate() : d;
+            } catch (Throwable e) { return d; }
+           }
+
+           private void prewarmSwipe() {
+            new Thread(() -> {
+             try {
+              for (String d : new String[]{"left", "down", "right"}) {
+               if ("list".equals(sp.getString("swm_" + d, ""))) warmKids(BubbleActs.kids(BubbleActs.swipeRoot(sp, d)), 0);
+              }
+             } catch (Throwable e) { }
+            }).start();
+           }
+
+           private void warmKids(List<BubbleActs.Act> ks, int depth) {
+            for (BubbleActs.Act k : ks) {
+             if (BubbleActs.isFolder(k)) { if (depth < 3) warmKids(BubbleActs.kids(k), depth + 1); }
+             else if (k.pkg != null && !svcIcons.containsKey(k.pkg)) {
+              try { svcIcons.put(k.pkg, getPackageManager().getApplicationIcon(k.pkg)); } catch (Throwable e) { }
+             }
+            }
+           }
+
            // after a swipe the bubble glides back to its own place with a soft, quick spring
            private void springBack(final int tx0, final int ty0, final Runnable after) {
             if (params == null || bubbleView == null) return;
@@ -1677,8 +1713,8 @@ jobs:
             final int fx0 = params.x, fy0 = params.y;
             final ValueAnimator an = ValueAnimator.ofFloat(0f, 1f);
             backAnim = an;
-            an.setDuration(200);
-            an.setInterpolator(new OvershootInterpolator(1.1f));
+            an.setDuration(120);
+            an.setInterpolator(new DecelerateInterpolator(1.6f));
             an.addUpdateListener(a -> {
              if (bubbleView == null) return;
              float t = (Float) a.getAnimatedValue();
@@ -2330,7 +2366,7 @@ jobs:
             }
             if (showIco) {
              ImageView iv = new ImageView(this);
-             try { iv.setImageDrawable(icon != null ? icon : getPackageManager().getApplicationIcon(pkg)); } catch (Throwable e) { }
+             try { iv.setImageDrawable(icon != null ? icon : svcIcon(pkg)); } catch (Throwable e) { }
              iv.setScaleType(ImageView.ScaleType.FIT_CENTER);
              LinearLayout.LayoutParams il = new LinearLayout.LayoutParams(isz, isz);
              if (showNm) il.setMarginEnd(dpToPx(8));
@@ -2467,7 +2503,7 @@ jobs:
             bubbleView.setOnTouchListener(new View.OnTouchListener() {
              int ix, iy;
              float tx, ty, lastDx, lastDy;
-             boolean moved, longFired, unlocked, gesture, swipeFired;
+             boolean moved, longFired, unlocked, gesture;
              Runnable longRun = new Runnable() {
               @Override
               public void run() {
@@ -2503,7 +2539,6 @@ jobs:
                 longFired = false;
                 unlocked = false;
                 gesture = false;
-                swipeFired = false;
                 lastDx = 0;
                 lastDy = 0;
                 downAt = SystemClock.uptimeMillis();
@@ -2516,6 +2551,7 @@ jobs:
                 if (!unlocked && !gesture && (Math.abs(dx) > dpToPx(8) || Math.abs(dy) > dpToPx(8))) {
                  // the bubble is locked: dragging it is a swipe, it does not move
                  gesture = true;
+                 prewarmSwipe();
                  handler.removeCallbacks(longRun);
                  if (listRoot != null) closeList();
                 }
@@ -2523,14 +2559,6 @@ jobs:
                  moved = true;
                  if (listRoot != null) closeList();
                 }
-                if (gesture && !moved && !swipeFired && Math.max(Math.abs(dx), Math.abs(dy)) > dpToPx(28)) {
-                 // the swipe is long enough: run it at once, while the finger is still moving (no waiting for the lift or the glide back)
-                 swipeFired = true;
-                 springBack(ix, iy, null);
-                 runSwipe(dx, dy);
-                 return true;
-                }
-                if (swipeFired) return true;
                 if (moved || gesture) {
                  params.x = ix + (int) dx;
                  params.y = iy + (int) dy;
@@ -2543,18 +2571,13 @@ jobs:
                 if (unlocked) bubbleView.animate().scaleX(1f).scaleY(1f).setDuration(120).start();
                 int sw = getResources().getDisplayMetrics().widthPixels;
                 int sh = getResources().getDisplayMetrics().heightPixels;
-                if (swipeFired) {
-                 // already run while moving; nothing more to do
-                } else if (gesture && !moved) {
+                if (gesture && !moved) {
                  // the bubble glides back at once; the app starts only when it is home (opening the launcher
                  // on the main thread would freeze the glide for a moment)
                  final float sdx = lastDx, sdy = lastDy;
                  boolean fire = ev.getAction() == MotionEvent.ACTION_UP
                    && Math.max(Math.abs(sdx), Math.abs(sdy)) > dpToPx(28);
-                 springBack(ix, iy, fire ? new Runnable() {
-                  @Override
-                  public void run() { runSwipe(sdx, sdy); }
-                 } : null);
+                 springBack(ix, iy, fire ? () -> runSwipe(sdx, sdy) : null);
                 } else if (moved) {
                  int px = (int) (params.x * 100f / Math.max(1, sw - params.width));
                  int py = (int) (params.y * 100f / Math.max(1, sh - params.height));
@@ -7917,18 +7940,6 @@ jobs:
             return tv;
            }
 
-           // pins one folder: the person picks the column it stays open in (or removes the pin)
-           void pinFolderDialog(final BubbleActs.Act f) {
-           final int cur = BubbleActs.pins(sp).optInt(f.fid, 0);
-           CharSequence[] cols = {t("بدون پین", "No pin"), t("ستون ۲", "Column 2"), t("ستون ۳", "Column 3"), t("ستون ۴", "Column 4"), t("ستون ۵", "Column 5")};
-           new AlertDialog.Builder(this).setTitle(BubbleActs.title(this, f) + (cur > 0 ? "   📌 " + t("ستون ", "column ") + cur : ""))
-             .setSingleChoiceItems(cols, cur == 0 ? 0 : cur - 1, (d, w) -> {
-              BubbleActs.setPin(sp, f.fid, w == 0 ? 0 : w + 1);
-              d.dismiss();
-              show();
-             }).setNegativeButton(t("لغو", "Cancel"), null).show();
-          }
-
           boolean collectFolders(List<BubbleActs.Act> level, String prefix, List<String> labels, List<String> fids) {
            boolean changed = false;
            for (BubbleActs.Act k : level) {
@@ -7943,39 +7954,52 @@ jobs:
            return changed;
           }
 
-          void leverSelected(final int idx, final boolean height) {
+          BubbleActs.Act selectedFolder(final int idx) {
            if (page == FEDIT) {
             fEdit(l -> {
              if (idx < l.size() && BubbleActs.isFolder(l.get(idx)) && (l.get(idx).fid == null || l.get(idx).fid.isEmpty()))
               l.get(idx).fid = BubbleActs.newFid();
             });
             List<BubbleActs.Act> ks = fKids();
-            if (idx < ks.size() && BubbleActs.isFolder(ks.get(idx))) colLeverDialog(ks.get(idx), height);
-           } else {
-            BubbleActs.Act[] acts = BubbleActs.load(sp);
-            if (idx < acts.length && BubbleActs.isFolder(acts[idx])) {
-             if (acts[idx].fid == null || acts[idx].fid.isEmpty()) { acts[idx].fid = BubbleActs.newFid(); BubbleActs.save(sp, acts); }
-             colLeverDialog(acts[idx], height);
-            }
+            return idx < ks.size() && BubbleActs.isFolder(ks.get(idx)) ? ks.get(idx) : null;
            }
+           BubbleActs.Act[] acts = BubbleActs.load(sp);
+           if (idx < acts.length && BubbleActs.isFolder(acts[idx])) {
+            if (acts[idx].fid == null || acts[idx].fid.isEmpty()) { acts[idx].fid = BubbleActs.newFid(); BubbleActs.save(sp, acts); }
+            return acts[idx];
+           }
+           return null;
           }
 
-          // pin button of the selection bar: pins the one ticked folder (of a folder, or of the actions)
+          void leverSelected(final int idx, final boolean height) {
+           BubbleActs.Act f = selectedFolder(idx);
+           if (f != null) colLeverDialog(f, height);
+          }
+
           void pinSelected(final int idx) {
-           if (page == FEDIT) {
-            fEdit(l -> {
-             if (idx < l.size() && BubbleActs.isFolder(l.get(idx)) && (l.get(idx).fid == null || l.get(idx).fid.isEmpty()))
-              l.get(idx).fid = BubbleActs.newFid();
-            });
-            List<BubbleActs.Act> ks = fKids();
-            if (idx < ks.size() && BubbleActs.isFolder(ks.get(idx))) pinFolderDialog(ks.get(idx));
+           BubbleActs.Act f = selectedFolder(idx);
+           if (f != null) pinChooser(f);
+          }
+
+          // pins the folder at once (to the first free column, 2 to 5); a pinned folder is unpinned
+          void pinChooser(final BubbleActs.Act f) {
+           if (f == null || f.fid == null || f.fid.isEmpty()) return;
+           if (BubbleActs.pinCol(sp, f) > 0) {
+            BubbleActs.setPin(sp, f.fid, 0);
+            Toast.makeText(this, t("پین برداشته شد", "Unpinned"), Toast.LENGTH_SHORT).show();
            } else {
-            BubbleActs.Act[] acts = BubbleActs.load(sp);
-            if (idx < acts.length && BubbleActs.isFolder(acts[idx])) {
-             if (acts[idx].fid == null || acts[idx].fid.isEmpty()) { acts[idx].fid = BubbleActs.newFid(); BubbleActs.save(sp, acts); }
-             pinFolderDialog(acts[idx]);
+            JSONObject used = BubbleActs.pins(sp);
+            int col = 5;
+            for (int c = 2; c <= 5; c++) {
+             boolean taken = false;
+             java.util.Iterator<String> it = used.keys();
+             while (it.hasNext()) if (used.optInt(it.next(), 0) == c) { taken = true; break; }
+             if (!taken) { col = c; break; }
             }
+            BubbleActs.setPin(sp, f.fid, col);
+            Toast.makeText(this, t("پوشه پین شد", "Folder pinned"), Toast.LENGTH_SHORT).show();
            }
+           show();
           }
 
           void colLeverDialog(final BubbleActs.Act f, final boolean height) {
@@ -8413,9 +8437,9 @@ jobs:
             n.setTextSize(14);
             b.addView(n, new LinearLayout.LayoutParams(0, -2, 1));
             if (folderSel) {
-             b.addView(btn("📌 " + t("پین", "Pin"), fg, v -> onPin.run()));
              b.addView(btn(t("ارتفاع", "Height"), fg, v -> onHeight.run()));
              b.addView(btn(t("عرض", "Width"), fg, v -> onWidth.run()));
+             b.addView(btn(t("پین", "Pin"), fg, v -> onPin.run()));
             }
             b.addView(btn(t("حذف", "Delete") + " (" + selIdx.size() + ")", 0xFFE53935, v -> onDelete.run()));
             return b;
@@ -8536,7 +8560,7 @@ jobs:
             if (BubbleActs.isFolder(a)) {
              CharSequence[] fi = {
                t("📂 باز کردن پوشه", "📂 Open folder"),
-               t("📌 پین کردن", "📌 Pin"),
+               BubbleActs.pinCol(sp, a) > 0 ? t("📍 برداشتن پین", "📍 Unpin") : t("📌 پین کردن", "📌 Pin"),
                t("ارتفاع ستون", "Column height"),
                t("عرض ستون", "Column width"),
                t("تغییر نام", "Rename"),
@@ -8546,7 +8570,7 @@ jobs:
                 if (w == 0) { fSrc = slot; fDir = ""; fPath = new int[0]; page = FEDIT; show(); }
                 else if (w == 1) {
                  if (a.fid == null || a.fid.isEmpty()) { a.fid = BubbleActs.newFid(); BubbleActs.save(sp, acts); }
-                 pinFolderDialog(a);
+                 pinChooser(a);
                 }
                 else if (w == 2 || w == 3) {
                  if (a.fid == null || a.fid.isEmpty()) { a.fid = BubbleActs.newFid(); BubbleActs.save(sp, acts); }
